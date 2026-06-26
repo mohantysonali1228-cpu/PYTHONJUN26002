@@ -1,8 +1,12 @@
 from django.shortcuts import render
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
-from .serializers import EventSerializer
+from .serializers import EventSerializer,RegisterSerializer
+
 from .models import Event
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated
 
 
 # Create your views here.
@@ -88,6 +92,8 @@ def delteEvent(request, id):
     })  
 @api_view(['GET'])
 def getEventByPaginate(request):
+
+
     page = int(request.GET.get('page',1))
     per_page = int(request.GET.get('per_page',5))
     
@@ -109,6 +115,46 @@ def getEventByPaginate(request):
            "has_previous_page":page_obj.has_previous()
        }
         })
+@api_view(['POST'])
+def register(request):
+    serData = RegisterSerializer(data= request.data)
+
+    if(serData.is_valid()):
+        serData.save()
+
+        return Response({
+            "message":"Register successfully",
+            "user":serData.data
+        })
+    return Response(serData.errors)
+@api_view(['GET'])
+def  login(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    user = authenticate(
+        username=username,
+        password= password,
+
+    )
+    if user:
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            "token":token.key,
+            "username":user.name
+        })
+    return Response({
+        "message":"Invalid card"
+    })
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile(request):
+    return Response({
+        "id":request.user.id,
+        "username": request.user.username,
+        "email": request.user.email
+    })
+    
 
 
        
